@@ -1,0 +1,10 @@
+##  Find data whose conversion you want to test
+#  grep -Pnir '  <datafield tag="773"' MARC21.xml | head
+
+##  Extract it from the ISO2709-file
+#  head -n 2187 Finmarc.dat | tail -n 2 > cp.fm.dat
+
+##  Convert it using usermacon
+#  ./usemarcon fi2ma/fi2ma.ini cp.fm.dat marc.chunk
+
+##  eezy peezy lemon squeezy

@@ -1,0 +1,36 @@
+#All paths can be relative to the install.pl-script, or absolute.
+#Directories must end in the directory separator '/', eg. '../OrigoDump/'
+
+#Which Organization's rules to use?
+organization: kirkas
+
+#How many linked data rows are read to memory? use something less than 0 to read everything.
+DEBUGAuthoritiesCountLimit: -1
+
+#Which is the base directory from where to look for Origo export files
+origoSourceBaseDir: OrigoSource/
+
+#Where to put validated Origo export files
+origoValidatedBaseDir: OrigoValid/
+
+#Where to put data ready for INSERTion
+targetDataDirectory: OrigoComplete/
+
+Biblios:
+    #How many Records to skip from the beginning of the UsemarconTarget-MARCXML? 0 to not skip anything
+    skip: 0
+    #How many Records to process from UsemarconTarget-MARCXML? 0 to process all available Records
+    count: 0
+    MaxWordLength: 750
+    MaxRecordLength: 75000
+    #Where is the FinMARC-file? Expected to be in ISO2709-format encoded with ISO6937-2
+    FinMARCsource: Finmarc.dat
+    #Where to put the Usemarcon-converted MARC21-file?
+    UsemarconTarget: MARC21.raw.xml
+    #Where to put the postprocessed MARC21XML-file, encoded in utf8?
+    MARC21target: biblios.migrateme
+
+Borrowers:
+    #This is the value after which we start introducing anonymized SSN-keys for Borrowers.
+    #Check the SSN-store which is the largest SSN-key in use and add a few thousands.
+    firstFreeSSNStoreIndex: 170000
