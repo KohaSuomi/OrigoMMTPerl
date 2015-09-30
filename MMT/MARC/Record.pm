@@ -347,6 +347,10 @@ sub materialType {
                 $self->{materialType} = $itype->[0];
                 $self->addUnrepeatableSubfield('942', 'c', $itype->[0]); #Store the Koha 942$c default itemtype already.
             }
+            if ($self->{materialType} eq 'DELETE') {
+                print "Record docId:".$self->docId()." material type: 'DELETE'. Deleting record.\n";
+                die 'DELETE';
+            }
         }
         else {
             print "Record docId:".$self->docId()." has a bad material type:".$matType."\n";

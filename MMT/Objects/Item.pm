@@ -9,6 +9,7 @@ use TranslationTables::material_code_to_itype;
 use TranslationTables::branch_translation;
 use TranslationTables::location_translation;
 use TranslationTables::ykl_translation;
+use TranslationTables::departmentCode_translation;
 
 use MMT::Objects::BaseObject;
 use base qw(MMT::Objects::BaseObject);
@@ -32,8 +33,9 @@ sub constructor {
     $s->biblionumber(2);       #3 TeosID
     $s->homebranch(4);         #5 Kotipiste
     $s->holdingbranch(5);      #6 Piste
-    $s->permanent_location(6); #7 Kotiosasto
+    $s->permanent_location(4,6);#7 Kotiosasto
     $s->itemcallnumber(2,      #3 TeosID
+                       4,      #5 Kotipiste
                        6,      #7 Kotiosasto
                        16);    #17 Luokka
     $s->statuses(10,           #11 Tila -> AuktNiteentila.csv
@@ -101,6 +103,10 @@ sub homebranch {
     }
 
     my $homebranch = TranslationTables::branch_translation::translatePiste($homebranchId);
+    if ($homebranch eq 'DELETE') {
+        print $s->_errorPk("'5 Kotipiste' is DELETE");
+        die "BADPARAM";
+    }
 
     if (!$homebranch) {
         $s->{homebranch} = 'KONVERSIO';
@@ -127,33 +133,43 @@ sub holdingbranch {
     }
 }
 sub permanent_location {
-    my ($s, $c1) = @_;
-    my $homeDepartmentId = $s->{c}->[$c1];
+    my ($s, $c1, $c2) = @_;
+    my $homebranchId = $s->{c}->[$c1];
+    my $homeDepartmentId = $s->{c}->[$c2];
 
     unless ($homeDepartmentId) {
         print $s->_errorPk("Missing column '7 Kotiosasto'");
     }
 
-    my $permanent_location = TranslationTables::location_translation::location($homeDepartmentId);
-
-    if (!$permanent_location) {
-        $s->{permanent_location} = 'KONVERSIO';
+    my ($homebranch, $locationOverride) = TranslationTables::branch_translation::translatePiste($homebranchId);
+    if ($locationOverride) {
+        $s->{permanent_location} = $locationOverride;
     }
     else {
-        $s->{permanent_location} = $permanent_location;
+        $s->{permanent_location} = TranslationTables::location_translation::location($homeDepartmentId);
     }
+
+    if (not($s->{permanent_location})) {
+        $s->{permanent_location} = 'KONVERSIO';
+    }
+    $s->{location} = $s->{permanent_location};
 }
 sub itemcallnumber {
-    my ($s, $c1, $c2, $c3) = @_;
+    my ($s, $c1, $c2, $c3, $c4) = @_;
     my $biblionumber = $s->{c}->[$c1];
-    my $homeDepartmentId = $s->{c}->[$c2];
-    my $yklClass = $s->{c}->[$c3];
+    my $homebranchId = $s->{c}->[$c2]; #5 Kotipiste
+    my $homeDepartmentId = $s->{c}->[$c3];
+    my $yklClass = $s->{c}->[$c4];
 
     unless (defined($homeDepartmentId)) {
         print $s->_errorPk("Missing column '7 Kotiosasto'");
     }
-    my $departmentCode = TranslationTables::location_translation::code($homeDepartmentId);
-    $departmentCode = 'KONVERSIO' unless $departmentCode;
+
+    my $departmentCode = TranslationTables::departmentCode_translation::fetch($homebranchId, $homeDepartmentId);
+    if (not(defined($departmentCode))) {
+        $departmentCode = 'KONVERSIO';
+        print $s->_errorPk("Department code translation is undefined'");
+    }
 
     unless (defined($yklClass)) {
         print $s->_errorPk("Missing column '17 Luokka'");

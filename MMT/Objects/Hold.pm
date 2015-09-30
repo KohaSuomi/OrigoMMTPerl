@@ -6,7 +6,6 @@ use Encode;
 
 use MMT::Util::Common;
 use TranslationTables::branch_translation;
-use TranslationTables::location_translation;
 
 use MMT::Objects::BaseObject;
 use base qw(MMT::Objects::BaseObject);
@@ -104,6 +103,10 @@ sub branchcode {
     }
 
     my $branchcode = TranslationTables::branch_translation::translatePiste($branchcodeID);
+    if ($branchcode eq 'DELETE') {
+        print $s->_errorPk("'6 Noutopiste' is DELETE");
+        die "BADPARAM";
+    }
 
     if (!$branchcode) {
         $s->{branchcode} = 'KONVERSIO';

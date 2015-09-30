@@ -111,6 +111,12 @@ sub _errorPk {
     elsif (ref($self) =~ /Hold/) {
         $pkColumn = 'borrowernumber';
     }
+    elsif (ref($self) =~ /Checkout/) {
+        $pkColumn = 'borrowernumber';
+    }
+    elsif (ref($self) =~ /Fine/) {
+        $pkColumn = 'borrowernumber';
+    }
     else {
         die "BaseObject::_errorPk():> Unknown Object reference '".ref($self)."'. Add package detectors here to autodetect the correct primary key column!\n";
     }

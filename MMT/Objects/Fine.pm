@@ -6,7 +6,6 @@ use Encode;
 
 use MMT::Util::Common;
 use TranslationTables::branch_translation;
-use TranslationTables::location_translation;
 
 use MMT::Objects::BaseObject;
 use base qw(MMT::Objects::BaseObject);
@@ -92,6 +91,11 @@ sub descriptionAndAccounttype {
     my $reservationId = $s->{c}->[$c2]; #9 VarausID
     my $info = $s->{c}->[$c3]; #11 Lisatiedot
     my $branchcode = TranslationTables::branch_translation::translatePiste($branchcodeId);
+
+    if ($branchcode eq 'DELETE') {
+        print $s->_errorPk("'4 Luontipiste' is DELETE");
+        die "BADPARAM";
+    }
 
     my @descriptions;
     push @descriptions, 'Maksu Varauksesta' if ($reservationId);

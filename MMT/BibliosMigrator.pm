@@ -35,9 +35,7 @@ sub new {
     $self->{verbose} = 0 unless $params->{verbose} || $config->{verbose};
     $self->{_config} = $config;
 
-    $self->{repositories}->{Teos} = MMT::Repository::AuthoritiesRepository->createRepository(filePath => $CFG::CFG->{origoValidatedBaseDir}.'/Teos.csv',
-                                                                        pk => 0,
-                                                                        columns => [1,'itype',2,'mod',5,'add']);
+    $self->{repositories}->{Teos} = MMT::Repository::ArrayRepository->createRepository({filename => $CFG::CFG->{origoValidatedBaseDir}.'/Teos.csv', ioOp => '<', pkColumn => 0});
     $self->{repositories}->{MarcRepository} = MMT::Repository::MarcRepository->createRepository('>'); #Open the repo for writing
 
     return $self;
@@ -57,10 +55,9 @@ sub run {
         last if ($CFG::CFG->{Biblios}->{count} && $CFG::CFG->{Biblios}->{count} >= $count);
 
         print MMT::Util::Common::printTime($startTime)." BibliosMigrator - ".($i+1)."\n" if $i % 1000 == 999;
-        $self->handleRecord($i, $record);
-        if (MMT::Biblios::MarcRepair::run($record)) {
-            MMT::MARC::Printer::writeRecord($record);
-        }
+        next() unless ($self->handleRecord($i, $record));
+        next() unless (MMT::Biblios::MarcRepair::run($record));
+        MMT::MARC::Printer::writeRecord($record);
         $self->{repositories}->{MarcRepository}->put($record);
         $record->DESTROY(); #Prevent memory leaking.
         $count++;
@@ -98,19 +95,30 @@ sub handleRecord {
         $linking773w{$id} = $cParentId;
     }
 
-    my $repoEntry = $self->{repositories}->{Teos}->fetch($id);
-    if ($repoEntry) {
-        my $lastModificationDate = $self->{repositories}->{Teos}->fetch($id, undef, 'mod');
-        my $addDate = $self->{repositories}->{Teos}->fetch($id, undef, 'add');
-        my $itemType = $self->{repositories}->{Teos}->fetch($id, undef, 'itype');
+    eval {
+        my $teosRow = $self->{repositories}->{Teos}->fetch($id);
+        if ($teosRow) {
+            my $lastModificationDate = $teosRow->[2];
+            my $addDate = $teosRow->[5];
+            my $itemType = $teosRow->[1];
 
-        $record->materialType($itemType);
-        $record->dateReceived($addDate);
-        $record->modTime($lastModificationDate);
+            $record->materialType($itemType);
+            $record->dateReceived($addDate);
+            $record->modTime($lastModificationDate);
+        }
+        else {
+            print "    for Record '".$record->docId()."'\n";
+        }
+    };
+    if ($@) {
+        if ($@ =~ /DELETE/) {
+            return undef;
+        }
+        else {
+            die $@;
+        }
     }
-    else {
-        print "    for Record '".$record->docId()."'\n";
-    }
+    return 1;
 }
 
 sub validateLinkRelations {
@@ -123,4 +131,5 @@ sub validateLinkRelations {
         }
     }
 }
+
 1;
