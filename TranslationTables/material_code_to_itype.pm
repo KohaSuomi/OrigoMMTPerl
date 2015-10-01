@@ -22,7 +22,7 @@ our $tableKirkas = {
     100003 => ["KI"], #Pienpainate
     100004 => ["KI"], #Moniste
     100005 => ["TY"], #Työpiirustus
-    100006 => ["Aanikirja"], #Äänikirja
+    100006 => ["Aanikirja"], #Äänikirja => Converted in MarcRepair.pm
     100007 => ["MO"], #Moniviestin
     100011 => ["AL"], #Lehti
     100012 => ["KR"], #Kartta

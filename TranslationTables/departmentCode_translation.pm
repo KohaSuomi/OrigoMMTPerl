@@ -74,11 +74,18 @@ our $departmentCodeKirkas = {
     19 => "RPOL", #OL Oheislukemistot
     25 => "RPVL", #VL Varasto, lasten ja nuorten kir
 },
-9 => "",       #RR Rasivaaran kirjasto
-
-10 => "",      #VK Tohmajärven kirjasto /Värtsilä
-
-20 => "",      #PK Tohmajärven pääkirjasto
+20 => {      #PK Tohmajärven pääkirjasto
+    1 => "PKA",   #A Aikuisten osasto
+    2 => "PKK",   #K Käsikirjasto
+    3 => "PKKO",  #Ko Kotiseutukokoelma
+    4 => "PKL",   #L Lasten osasto
+    5 => "PKN",   #N Nuorten osasto
+    10 => "PKNV", #VN Nuorten varasto
+    11 => "PKLE", #LE Lehtiosasto
+    14 => "PKO",  #O Oheislukemisto
+    30 => "PKM",  #M Musiikkiosasto
+    31 => "PKV",  #A:V Aikuisten varasto => Varasto
+},
 };
 
 =head

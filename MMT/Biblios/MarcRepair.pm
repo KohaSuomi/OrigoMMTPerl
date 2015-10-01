@@ -6,7 +6,8 @@ use MMT::MARC::Field;
 use MMT::MARC::Subfield;
 
 my $statistics = {};
-$statistics->{cleanEmpty520} = 0;
+$statistics->{cleanEmptyField} = 0;
+$statistics->{convertAanikirjaItemtype} = 0;
 $statistics->{removeTitlelessRecords} = 0;
 
 sub run {
@@ -18,7 +19,8 @@ sub run {
 
     eval {
     removeTitlelessRecords($r);
-    cleanEmpty520($r);
+    cleanEmptyFields($r);
+    convertAanikirjaItemtype($r);
     };
     if ($@) {
         if ($@ =~ /FAIL/) {
@@ -31,15 +33,15 @@ sub run {
     return 1;
 }
 
-sub cleanEmpty520 {
+sub cleanEmptyFields {
     my ($r) = @_;
 
-    if (my $fia = $r->fields('520')) {
+    if (my $fia = $r->fields()) {
         foreach my $fi (@$fia) {
             if ( (my $sfa = $fi->getAllSubfields()) ) {
                 unless (  scalar(@$sfa) > 0 ) {
                     $r->deleteField( $fi );
-                    $statistics->{cleanEmpty520}++;
+                    $statistics->{cleanEmptyField}++;
                     next;
                 }
             }
@@ -62,15 +64,42 @@ sub removeTitlelessRecords {
     die 'FAIL';
 }
 
+sub convertAanikirjaItemtype {
+    my ($r, $materialType) = @_;
+
+    if ($materialType eq 'Aanikirja') {
+        my $sf007 = $r->getUnrepeatableSubfield('007','a');
+        unless ($sf007) {
+            print("Record '".$r->docId()."' has no field 007!\n");
+            return '';
+        }
+        $statistics->{convertAanikirjaItemtype}++;
+
+        my $specificMaterialDesignation = substr($sf007->content(),1,1);
+        if ($specificMaterialDesignation eq 'u' || $specificMaterialDesignation eq 'd') {
+            return 'CD';
+        }
+        elsif ($specificMaterialDesignation eq 's') {
+            return 'KA';
+        }
+        else {
+            print("Record '".$r->docId()."' has unknown field 007/01 specific material designation!\n");
+            return "";
+        }
+    }
+
+    return $materialType;
+}
+
 sub printStatistics {
     my $count = 0;
-    my $report = "MarcRepair statistics\n";
+    my $report = "\n\nMarcRepair statistics\n";
     for my $action (sort keys %$statistics) {
-        $report .= $action.':'.$statistics->{$action}.'   ';
+        $report .= $action.':'.$statistics->{$action}.'   '."\n";
         
         $count += $statistics->{$action};
     }
-    print($report . 'TOTAL:' . $count);
+    print($report . 'TOTAL:' . $count) . "\n\n";
 }
 
 

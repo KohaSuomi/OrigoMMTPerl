@@ -35,6 +35,8 @@ use strict;
 use MMT::MARC::Field;
 use MMT::MARC::Subfield;
 
+use MMT::Biblios::MarcRepair;
+
 use TranslationTables::material_code_to_itype;
 use TranslationTables::isil_translation;
 
@@ -337,16 +339,11 @@ sub materialType {
         if (defined $itype && exists $itype->[0]) {
             $self->isASerial(1) if exists $itype->[1] && $itype->[1] == 1;
 
-            my $materialTypeOverride; #Remember to define these overrides in the TranslationTables::material_code_to_itype
+            $itype->[0] = MMT::Biblios::MarcRepair::convertAanikirjaItemtype($self, $itype->[0]);
 
-            if ($materialTypeOverride) {
-                $self->{materialType} = $materialTypeOverride;
-                $self->addUnrepeatableSubfield('942', 'c', $materialTypeOverride); #Store the Koha 942$c default itemtype already.
-            }
-            else {
-                $self->{materialType} = $itype->[0];
-                $self->addUnrepeatableSubfield('942', 'c', $itype->[0]); #Store the Koha 942$c default itemtype already.
-            }
+            $self->{materialType} = $itype->[0];
+            $self->addUnrepeatableSubfield('942', 'c', $itype->[0]); #Store the Koha 942$c default itemtype already.
+
             if ($self->{materialType} eq 'DELETE') {
                 print "Record docId:".$self->docId()." material type: 'DELETE'. Deleting record.\n";
                 die 'DELETE';

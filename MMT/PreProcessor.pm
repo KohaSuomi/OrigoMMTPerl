@@ -33,6 +33,8 @@ sub run {
     #$params->{filename} = 'Puhelin.txt';
     sourceDataValidation($params);
     usemarconConversion($params);
+
+    print "\n\n".MMT::Util::Common::printTime($startTime)." PreProcessor - Complete\n\n";
 }
 
 sub writeToDisk {

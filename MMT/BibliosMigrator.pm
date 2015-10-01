@@ -65,6 +65,7 @@ sub run {
     MMT::MARC::Printer::endCollection();
 
     $self->validateLinkRelations();
+    MMT::Biblios::MarcRepair::printStatistics();
     print "\n\n".MMT::Util::Common::printTime($startTime)." BibliosMigrator - Complete\n\n";
 }
 
