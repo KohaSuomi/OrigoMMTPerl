@@ -42,7 +42,7 @@ sub fetch {
     my $borcat;
 
     if ($CFG::CFG->{organization} eq 'kirkas') {
-        $borcat = $tablePielinen->{$key} if exists $tableKirkas->{$key};
+        $borcat = $tableKirkas->{$key} if exists $tableKirkas->{$key};
     }
     elsif ($CFG::CFG->{organization} eq 'pielinen') {
         $borcat = $tablePielinen->{$key} if exists $tablePielinen->{$key};

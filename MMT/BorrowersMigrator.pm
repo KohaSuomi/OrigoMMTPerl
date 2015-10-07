@@ -29,6 +29,7 @@ sub new {
     $self->{_config} = $config;
 
     $self->{repositories}->{Asiakasviivakoodi} = MMT::Repository::ArrayRepository->createRepository({filename => $config->{origoValidatedBaseDir}.'Asiakasviivakoodi.csv', ioOp => '<', pkColumn => 1});
+    $self->{repositories}->{KontaktiID_to_AsiakasID} = MMT::Repository::ArrayRepository->createRepository({filename => $config->{origoValidatedBaseDir}.'Asiakas.csv', ioOp => '<', pkColumn => 28, columns => [0]});
     $self->{repositories}->{Osoite} = MMT::Repository::ArrayRepository->createRepository({filename => $config->{origoValidatedBaseDir}.'Osoite.csv', ioOp => '<', pkColumn => 1});
     $self->{repositories}->{Puhelin} = MMT::Repository::ArrayRepository->createRepository({filename => $config->{origoValidatedBaseDir}.'Puhelin.csv', ioOp => '<', pkColumn => 1});
     $self->{repositories}->{Lainauskielto} = MMT::Repository::ArrayRepository->createRepository({filename => $config->{origoValidatedBaseDir}.'Lainauskielto.csv', ioOp => '<', pkColumn => 1});

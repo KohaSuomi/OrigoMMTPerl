@@ -3,6 +3,8 @@ package MMT::Objects::Borrower;
 use Modern::Perl;
 
 use Encode;
+use DateTime;
+use DateTime::Format::ISO8601;
 
 use MMT::Util::Common;
 use TranslationTables::branch_translation;
@@ -36,10 +38,10 @@ sub constructor {
     $s->phonesAndMobiles(28);#29 KontaktiID -> Puhelin.csv
     $s->dateofbirth(21);     #22 Syntymaaika
     $s->branchcode(1);       #2 Kotikunta
-    $s->categorycode(15);    #16 Asiakastyyppi -> AuktAsiakastyyppi.csv
     $s->dateenrolled(11);    #12 LisaysPvm
     $s->dateexpiry(3);       #4 VoimassaLoppu
     $s->guarantorid(16);     #17 TakaajaID
+    $s->categorycode(15);    #16 Asiakastyyppi -> AuktAsiakastyyppi.csv
     $s->sex(23);             #24 Sukupuoli
     $s->password(29);        #30 Salakala
     $s->userid(22);          #23 Tunnus/Sotu
@@ -281,6 +283,7 @@ sub branchcode {
         $s->{branchcode} = 'KONVERSIO';
     }
 }
+my $childAgeThreshold = DateTime->now()->subtract(years => 16)->ymd('');
 sub categorycode {
     my ($s, $c1) = @_;
     my $borrowerCategory = $s->{c}->[$c1];
@@ -296,6 +299,19 @@ sub categorycode {
         $s->_addNote("Virheellinen asiakaslaji '$borrowerCategory'");
         print $s->_errorPk("Bad Borrower category '$borrowerCategory'");
     }
+
+    if ($s->{guarantorid} && $categorycode eq 'HENKILO') { #HENKILO which has a guarantor, is either a child or a guarantee.
+        my $dob = $s->{dateofbirth};
+        $dob =~ s/\D//g; #Drop digits so we can easily compare
+        $dob = substr($dob,0,8); #Normalize, we could also use DateTime but that would be much slower.
+        if ($dob < $childAgeThreshold) {
+            $categorycode = 'LAPSI';
+        }
+        else {
+            $categorycode = 'MUUKUINLAP';
+        }
+    }
+
     $s->{categorycode} = $categorycode;
 }
 sub dateenrolled {
@@ -310,12 +326,19 @@ sub dateenrolled {
 }
 sub dateexpiry {
     my ($s, $c1) = @_;
+    my $dateExpiry = $s->{c}->[$c1];
 
-    unless (defined($s->{c}->[$c1])) {
+    unless (defined($dateExpiry)) {
         print $s->_error("Missing column '4 VoimassaLoppu'");
         return;
     }
-    $s->{dateexpiry} = $s->{c}->[$c1];
+#dateExpiry of 1900-01-01 can also be a signal of the borrower being deleted.
+#    if ($dateExpiry =~ /^1900/) { #If the value is 1900-01-01, we give it the default expiration date.
+#        $dateExpiry = DateTime->now();
+#        $dateExpiry->add( days => 720+int(rand(720)) );
+#        $dateExpiry = $dateExpiry->ymd('-') . ' ' . $dateExpiry->hms(':')
+#    }
+    $s->{dateexpiry} = $dateExpiry;
 }
 sub guarantorid {
     my ($s, $c1) = @_;
@@ -323,7 +346,17 @@ sub guarantorid {
     #unless (defined($s->{c}->[$c1])) {
         #print $s->_error("Missing column '17 TakaajaID'");
     #}
-    $s->{guarantorid} = $s->{c}->[$c1];
+    my $guarantorId = $s->{c}->[$c1];
+    if ($guarantorId) {
+        #Convert TakaajaID via KontaktiID to AsiakasID for some reason?
+        my $kontaktiIdAry = $s->{controller}->{repositories}->{KontaktiID_to_AsiakasID}->fetch( $guarantorId );
+        if ($kontaktiIdAry) {
+            $s->{guarantorid} = $kontaktiIdAry->[0];
+        }
+        else {
+            print $s->_errorPk("Column '17 TakaajaID' present, but no guarantor found.");
+        }
+    }
 }
 sub sex {
     my ($s, $c1) = @_;
@@ -400,7 +433,16 @@ sub standing_penalties {
         my $deb = $debarments->[$i];
         my $date = $deb->[2];
         my $reason = $deb->[3];
-        $s->{standing_penalties} .= "<99>$date<>$reason";
+        my $debarment = $deb->[4]; #Debarment or note? 'true if debarment
+        if ($debarment eq 'true') {
+            $s->{standing_penalties} .= "<99>$date<>$reason";
+        }
+        elsif ($reason =~ /^ok/i) { #Ok, oK, OK!, ok., ok!, Ok!, Ok., ... #This means that they have checked the borrowers contact info.
+            $s->{_contactOk} = $reason; #Tag the Borrower Justin Case.
+        }
+        else {
+            $s->_addNote("Lainauskieltohuomautus: $date, $reason");
+        }
     }
 }
 sub _findSSN {

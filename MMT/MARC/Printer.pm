@@ -80,7 +80,7 @@ sub writeRecord {
                     my $dbg = 1;
                 }
                 
-                push @sb, "\n".'    <subfield code="'.$sf->code.'">'.$sf->content.'</subfield>';
+                push @sb, "\n".'    <subfield code="'.$sf->code.'">'.$sf->contentXMLEscaped.'</subfield>';
             }
         } #EndOf subfields iteration
         if ($fieldType eq 'datafield') {

@@ -32,7 +32,7 @@ sub constructor {
     $s->renewals(11);      #12 Uusimiskerta - 0-10
     };
     if ($@) {
-        if ($@ eq 'BADPARAM') {
+        if ($@ =~ /BADPARAM/) {
             
         }
         else {

@@ -10,9 +10,11 @@ our $tableKirkas = {
     3 => ["LE"], #levy
     8 => ["MK"], #mikrokortti
     10 => ["KO"], #kooste
-    17 => ["Yle: video"], #Yle: video
-    18 => ["Yle: aanitteet"], #Yle: äänitteet
-    19 => ["Yle: dvd"], #Yle: DVD-levy
+    ##Yle-itemtypes are dealt with in MarcRepair::convertYleItemTypes
+    17 => ["Yle: video"], #Yle: video => VI
+    18 => ["Yle: aanitteet"], #Yle: äänitteet => KA|CD
+    19 => ["Yle: dvd"], #Yle: DVD-levy => DV
+
     20 => ["EK"], #Sähköinen kirja
     21 => ["DELETE"], #Leikekuori
     22 => ["BR"], #Blu-ray
@@ -22,7 +24,9 @@ our $tableKirkas = {
     100003 => ["KI"], #Pienpainate
     100004 => ["KI"], #Moniste
     100005 => ["TY"], #Työpiirustus
-    100006 => ["Aanikirja"], #Äänikirja => Converted in MarcRepair.pm
+    ##Aanikirja is dealt with in MarcRepair::convertAanikirjaItemtype
+    100006 => ["Aanikirja"], #Äänikirja
+
     100007 => ["MO"], #Moniviestin
     100011 => ["AL"], #Lehti
     100012 => ["KR"], #Kartta

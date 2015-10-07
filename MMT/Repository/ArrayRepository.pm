@@ -16,6 +16,7 @@ Extend it and overload prepareData() to do custom filtering.
 @PARAM1 HASHRef, filename => 'source/Borrowers.csv'
                  ioOp => '<' || '>'  #Read or write to file
                  pkColumn => 0 || 1 || n #Which column index is the primary key used for searching.
+                 columns => [1,3,5] #Which columns to extract, defaults to every column. You can use this with very big tables.
 
 =cut
 
@@ -26,6 +27,7 @@ sub createRepository {
     $self->{filename} = $params->{filename};
     $self->{ioOp} = $params->{ioOp};
     $self->{pkColumn} = $params->{pkColumn} || 0;
+    $self->{columns} = $params->{columns} || undef;
 
     my $startTime = time();
 
@@ -45,6 +47,14 @@ sub createRepository {
 sub prepareData {
     my ($self, $data) = @_;
     ##THIS IS MEANT TO BE OVERLOADED FROM SUBCLASSES
+    if ($self->{columns}) {
+        my @data;
+        foreach my $i (@{$self->{columns}}) {
+            push @data, $data->[$i];
+        }
+        return \@data;
+    }
+
     return $data;
 }
 

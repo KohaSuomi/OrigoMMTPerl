@@ -52,9 +52,10 @@ sub constructor {
     $s->datelastseen(35);      #36 HavaintoPvm
     $s->issues(48);            #49 LkmLainaYht
     $s->itype();               #From MarcRepository
+    $s->coded_location_qualifier();#From MarcRepository
     };
     if ($@) {
-        if ($@ eq 'BADPARAM') {
+        if ($@ =~ /BADPARAM/) {
             
         }
         else {
@@ -288,6 +289,14 @@ sub itype {
     my $itype = $marcRepoRow->[2] if ($marcRepoRow);
     $itype = 'NO_BIBLIO' unless $itype;
     $s->{itype} = $itype;
+}
+#This is an optional override, mainly used to distinguish 'yle'-items for statistics
+sub coded_location_qualifier { 
+    my ($s) = @_;
+    my $marcRepoRow = $s->{controller}->{repositories}->{MarcRepository}->fetch( $s->{biblionumber} );
+    my $clq = $marcRepoRow->[3] if ($marcRepoRow);
+    return unless $clq;
+    $s->{coded_location_qualifier} = $clq;
 }
 
 1;

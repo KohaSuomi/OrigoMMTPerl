@@ -1,6 +1,8 @@
 package MMT::BibliosMigrator;
 
 use Modern::Perl;
+use threads;
+use threads::shared;
 
 use YAML::XS;
 
@@ -15,6 +17,7 @@ use MMT::MARC::Printer;
 my %available001; #Collect available component parent ID's here so we can verify that 773$w points somewhere.
 my %linking773w; #Collect component part record id's and their parent references here.
 my $startTime = time();
+my $threads = [];
 
 =head BibliosMigrator
 
@@ -36,7 +39,11 @@ sub new {
     $self->{_config} = $config;
 
     $self->{repositories}->{Teos} = MMT::Repository::ArrayRepository->createRepository({filename => $CFG::CFG->{origoValidatedBaseDir}.'/Teos.csv', ioOp => '<', pkColumn => 0});
+    $self->{repositories}->{Nide} = MMT::Repository::ArrayRepository->createRepository({filename => $CFG::CFG->{origoValidatedBaseDir}.'/Nide.csv', ioOp => '<', pkColumn => 2, columns => [16]});
     $self->{repositories}->{MarcRepository} = MMT::Repository::MarcRepository->createRepository('>'); #Open the repo for writing
+    $self->{marcxmlReader} = MMT::Util::MARCXMLReader->new({sourceFile => $self->{_config}->{origoValidatedBaseDir}.
+                                                                          $self->{_config}->{Biblios}->{UsemarconTarget}
+                                                        });
 
     return $self;
 }
@@ -47,36 +54,65 @@ sub run {
     print "\n\n".MMT::Util::Common::printTime($startTime)." BibliosMigrator - Starting\n\n";
     MMT::MARC::Printer::startCollection();
 
-    my $i = 0;
-    my $count = 0;
-    while (my $record = $self->nextXML()) {
-        $i++;
-        next if ($CFG::CFG->{Biblios}->{skip} && $CFG::CFG->{Biblios}->{skip} >= $i);
-        last if ($CFG::CFG->{Biblios}->{count} && $CFG::CFG->{Biblios}->{count} >= $count);
+    my $i :shared = 0;
+    my $count :shared = 0;
+    my $threadRoutine = sub {
+        my $self = shift;
+        $self->{threadId} = shift().'' || 1;
+        while (my $record = $self->nextXML()) {
+            $i++;
+            next if ($CFG::CFG->{Biblios}->{skip} && $CFG::CFG->{Biblios}->{skip} >= $i);
+            last if ($CFG::CFG->{Biblios}->{count} && $CFG::CFG->{Biblios}->{count} >= $count);
+    
+            print MMT::Util::Common::printTime($startTime)." BibliosMigrator - (".$self->{threadId}.") ".($i+1)."\n" if $i % 1000 == 999;
+            next() unless ($self->handleRecord($i, $record));
+            next() unless (MMT::Biblios::MarcRepair::run($self, $record));
+            MMT::MARC::Printer::writeRecord($record);
+            $self->{repositories}->{MarcRepository}->put($record);
+            $record->DESTROY(); #Prevent memory leaking.
+            $count++;
+        }
+    };
+    ### Threaded programming starts HERE ###
+    #Initialize threads
+    if ($CFG::CFG->{threadCount} > 1) {
+		for my $i (1..$CFG::CFG->{threadCount}) {
+			$threads->[$i] = threads->create( $threadRoutine,$self,$i );
+		}
+        #Keep monitoring thread status
+		while (@$threads > 0) {
+			for (my $ti=0 ; $ti<@$threads ; $ti++) {
+				my $thread = $threads->[$ti];
+				# Check thread's state
+			    if ($thread->is_running()) {
+				    sleep(5);
+			    }
+			    if ($thread->is_joinable()) {
+				    $thread->join();
+				    splice @$threads, $ti, 1;
+			    }
+		    }	
+		}
+    } ##EO Threaded programming
+    ### Synchronous programming HERE ###
+    else {
+	&$threadRoutine($self, $CFG::CFG->{threadCount});
+    }## EO Synhronous programming
 
-        print MMT::Util::Common::printTime($startTime)." BibliosMigrator - ".($i+1)."\n" if $i % 1000 == 999;
-        next() unless ($self->handleRecord($i, $record));
-        next() unless (MMT::Biblios::MarcRepair::run($record));
-        MMT::MARC::Printer::writeRecord($record);
-        $self->{repositories}->{MarcRepository}->put($record);
-        $record->DESTROY(); #Prevent memory leaking.
-        $count++;
-    }
+    
     MMT::MARC::Printer::endCollection();
 
     $self->validateLinkRelations();
     MMT::Biblios::MarcRepair::printStatistics();
-    print "\n\n".MMT::Util::Common::printTime($startTime)." BibliosMigrator - Complete\n\n";
+    print "\n\n".MMT::Util::Common::printTime($startTime)." BibliosMigrator - Complete\n";
+    print "Remember to fix component part link (773w->001 && 003->003)- and publication date (in 008) relations from the component parent!\n\n";
 }
 
+#my $getXmlLock :shared = 1;
 sub nextXML {
+#    lock $getXmlLock;
     my ($self) = @_;
 
-    unless($self->{marcxmlReader}) {
-        $self->{marcxmlReader} = MMT::Util::MARCXMLReader->new({sourceFile => $self->{_config}->{origoValidatedBaseDir}.
-                                                                              $self->{_config}->{Biblios}->{UsemarconTarget}
-                                                            });
-    }
     return $self->{marcxmlReader}->next();
 }
 
@@ -108,7 +144,7 @@ sub handleRecord {
             $record->modTime($lastModificationDate);
         }
         else {
-            print "    for Record '".$record->docId()."'\n";
+            print "Missing Teos-authority for Record '".$record->docId()."'\n";
         }
     };
     if ($@) {

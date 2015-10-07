@@ -73,6 +73,7 @@ sub contentXMLEscaped {
     $c =~ s/</&lt;/sg;
     $c =~ s/>/&gt;/sg;
     $c =~ s/"/&quot;/sg;
+    return $c;
 }
 sub parent {
     my $self = shift;

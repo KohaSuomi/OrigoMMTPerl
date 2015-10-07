@@ -325,7 +325,7 @@ sub signum {
             ($signumSource = $self->getUnrepeatableSubfield('111', 'a')) ||
             ($signumSource = $self->getUnrepeatableSubfield('130', 'a')) ||
             ($signumSource = $self->getUnrepeatableSubfield('245', 'a')) ) {
-            $self->{signum} = substr($signumSource->content(), 0, 3);
+            $self->{signum} = uc(substr($signumSource->content(), 0, 3));
         }
     }
     return $self->{signum};
@@ -340,6 +340,7 @@ sub materialType {
             $self->isASerial(1) if exists $itype->[1] && $itype->[1] == 1;
 
             $itype->[0] = MMT::Biblios::MarcRepair::convertAanikirjaItemtype($self, $itype->[0]);
+            $itype->[0] = MMT::Biblios::MarcRepair::convertYleItemTypes($self, $itype->[0]);
 
             $self->{materialType} = $itype->[0];
             $self->addUnrepeatableSubfield('942', 'c', $itype->[0]); #Store the Koha 942$c default itemtype already.
