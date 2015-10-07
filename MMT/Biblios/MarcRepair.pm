@@ -32,7 +32,7 @@ sub run {
     mergeSeparate260($r);
     move362aAfter245a($r);
     dropObsoleteFields($r);
-    repairMissing084fromItems($r);
+    repairMissing084fromItems($bibliosMigrator, $r);
     };
     if ($@) {
         if ($@ =~ /FAIL/) {

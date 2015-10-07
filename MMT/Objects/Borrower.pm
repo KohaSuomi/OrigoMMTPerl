@@ -441,6 +441,7 @@ sub standing_penalties {
             $s->{_contactOk} = $reason; #Tag the Borrower Justin Case.
         }
         else {
+            $date = substr($date,0,8);
             $s->_addNote("Lainauskieltohuomautus: $date, $reason");
         }
     }
