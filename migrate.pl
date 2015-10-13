@@ -11,6 +11,7 @@ use MMT::BorrowersMigrator;
 use MMT::CheckoutsMigrator;
 use MMT::FinesMigrator;
 use MMT::HoldsMigrator;
+use MMT::RotatingCollectionsMigrator;
 
 use Carp;
 $SIG{ __DIE__ } = sub { Carp::confess( @_ ) };
@@ -25,6 +26,7 @@ my $borrowers = 0;
 my $checkouts = 0;
 my $fines = 0;
 my $holds = 0;
+my $rotatingCollections = 0;
 
 GetOptions(
             'h|help'         => \$help,
@@ -37,6 +39,7 @@ GetOptions(
             'M|migrate-all'  => \$migrateAll,
             'f|fines'        => \$fines,
             'H|holds'        => \$holds,
+            'r|rotating-collections' => \$rotatingCollections,
 );
 
 if ($help) {
@@ -86,4 +89,8 @@ if ($fines) {
 if ($holds) {
     my $hm = MMT::HoldsMigrator->new({verbose => $verbose});
     $hm->run();
+}
+if ($rotatingCollections) {
+    my $rm = MMT::RotatingCollectionsMigrator->new({verbose => $verbose});
+    $rm->run();
 }

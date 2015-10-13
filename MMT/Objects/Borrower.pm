@@ -52,8 +52,8 @@ sub constructor {
     $s->{ssn} = MMT::Borrowers::SsnToSsnStore::appendValues($s->{ssn}) if $s->{ssn}; #Store the confirmed SSN to repository
     };
     if ($@) {
-        if ($@ eq 'BADPARAM') {
-            
+        if ($@ =~ /BADPARAM/) {
+            return undef;
         }
         else {
             print $@;
@@ -69,7 +69,7 @@ sub borrowernumber {
     my ($s, $c1) = @_;
 
     unless ($s->{c}->[$c1]) {
-        print $s->_error("No mandatory column '$c1'");
+        print $s->_error("No mandatory column '1 ID'");
         die "BADPARAM";
     }
     $s->{borrowernumber} = $s->{c}->[$c1];
@@ -86,8 +86,16 @@ sub cardnumber {
         return;
     };
 
+    my $isGuarantor = $s->{controller}->{repositories}->{TakaajaID}->fetch($s->{borrowernumber});
     my $barcodes = $s->{controller}->{repositories}->{Asiakasviivakoodi}->fetch($s->{borrowernumber});
-    return &$badBarcodeError("Missing cardnumber authority record") unless ($barcodes);
+
+    if (not($barcodes) && not($isGuarantor)) {
+        return &$badBarcodeError("Missing cardnumber authority record");
+    }
+    elsif (not($barcodes) && $isGuarantor) {
+        $s->{categorycode} = 'TAKAAJA';
+        return;
+    }
 
     $barcodes = [$barcodes] unless ref($barcodes) eq 'ARRAY';
     $barcodes = [$barcodes] unless ref($barcodes->[0]) eq 'ARRAY';
@@ -292,6 +300,9 @@ sub categorycode {
         print $s->_errorPk("Missing column '16 Asiakastyyppi'");
         return;
     }
+    if ($s->{categorycode}) { #Categorycode already defined in cardnumber
+        return;
+    }
 
     my $categorycode = TranslationTables::borrower_categorycode::fetch($borrowerCategory);
     unless ($categorycode) {
@@ -304,7 +315,7 @@ sub categorycode {
         my $dob = $s->{dateofbirth};
         $dob =~ s/\D//g; #Drop digits so we can easily compare
         $dob = substr($dob,0,8); #Normalize, we could also use DateTime but that would be much slower.
-        if ($dob < $childAgeThreshold) {
+        if ($dob > $childAgeThreshold) {
             $categorycode = 'LAPSI';
         }
         else {
@@ -332,12 +343,12 @@ sub dateexpiry {
         print $s->_error("Missing column '4 VoimassaLoppu'");
         return;
     }
-#dateExpiry of 1900-01-01 can also be a signal of the borrower being deleted.
-#    if ($dateExpiry =~ /^1900/) { #If the value is 1900-01-01, we give it the default expiration date.
-#        $dateExpiry = DateTime->now();
-#        $dateExpiry->add( days => 720+int(rand(720)) );
-#        $dateExpiry = $dateExpiry->ymd('-') . ' ' . $dateExpiry->hms(':')
-#    }
+
+    if ($dateExpiry =~ /^1900/) { #If the value is 1900-01-01, we give it the default expiration date.
+        $dateExpiry = DateTime->now();
+        $dateExpiry->add( days => 720+int(rand(360)) );
+        $dateExpiry = $dateExpiry->ymd('-') . ' ' . $dateExpiry->hms(':')
+    }
     $s->{dateexpiry} = $dateExpiry;
 }
 sub guarantorid {

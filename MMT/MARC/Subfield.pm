@@ -1,7 +1,6 @@
 package MMT::MARC::Subfield;
 
-use warnings;
-use strict;
+use Modern::Perl;
 
 use MMT::MARC::Field;
 use MMT::MARC::Record;

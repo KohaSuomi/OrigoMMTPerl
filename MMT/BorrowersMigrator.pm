@@ -33,6 +33,7 @@ sub new {
     $self->{repositories}->{Osoite} = MMT::Repository::ArrayRepository->createRepository({filename => $config->{origoValidatedBaseDir}.'Osoite.csv', ioOp => '<', pkColumn => 1});
     $self->{repositories}->{Puhelin} = MMT::Repository::ArrayRepository->createRepository({filename => $config->{origoValidatedBaseDir}.'Puhelin.csv', ioOp => '<', pkColumn => 1});
     $self->{repositories}->{Lainauskielto} = MMT::Repository::ArrayRepository->createRepository({filename => $config->{origoValidatedBaseDir}.'Lainauskielto.csv', ioOp => '<', pkColumn => 1});
+    $self->{repositories}->{TakaajaID} = MMT::Repository::ArrayRepository->createRepository({filename => $config->{origoValidatedBaseDir}.'Asiakas.csv', ioOp => '<', pkColumn => 16, columns => [0]});
 
     return $self;
 }
@@ -49,6 +50,7 @@ sub run {
     while (my $row = $csvStreamer->next()) {
         print MMT::Util::Common::printTime($startTime)." BorrowersMigrator - ".($csvStreamer->{i}+1)."\n" if $csvStreamer->{i} % 1000 == 999;
         my $object = MMT::Objects::Borrower->constructor($self, $row);
+        next unless $object;
 
         print $objOut $object->toString()."\n";
         $object->DESTROY(); #Prevent memory leaking.

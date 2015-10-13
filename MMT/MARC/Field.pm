@@ -1,7 +1,6 @@
 package MMT::MARC::Field;
 
-use warnings;
-use strict;
+use Modern::Perl;
 
 use MMT::MARC::Subfield;
 use MMT::MARC::Record;
@@ -81,7 +80,7 @@ sub addSubfield {
     my $sf;
 
     unless (defined($subfield_code)) {
-        warn "Record '".$self->parent->docId()."'. Trying to add subfield, but no subfield code!\n";
+        print "Record '".$self->parent->docId()."'. Trying to add subfield, but no subfield code!\n";
         return undef;
     }
 
@@ -91,7 +90,7 @@ sub addSubfield {
     else {
         my $subfield_content = $_[2];
         unless (defined($subfield_content)) {
-            warn "Record '".$self->parent()->docId()."'. Trying to add subfield '$subfield_code' for field '".$self->code()."', but no subfield content!\n";
+            print "Record '".$self->parent()->docId()."'. Trying to add subfield '$subfield_code' for field '".$self->code()."', but no subfield content!\n";
             return undef;
         }
         $sf = MMT::MARC::Subfield->new($subfield_code, $subfield_content);

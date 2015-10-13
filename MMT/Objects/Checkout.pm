@@ -33,7 +33,7 @@ sub constructor {
     };
     if ($@) {
         if ($@ =~ /BADPARAM/) {
-            
+            return undef;
         }
         else {
             print $@;

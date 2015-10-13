@@ -16,6 +16,8 @@ $statistics->{mergeSeparate260} = 0;
 $statistics->{move362aAfter245a} = 0;
 $statistics->{removeExtraFields} = 0;
 $statistics->{repairMissing084fromItems} = 0;
+$statistics->{callNumberRepaired} = 0;
+$statistics->{callNumberSalvagedFrom090} = 0;
 
 sub run {
     my ($bibliosMigrator, $r) = @_;
@@ -33,6 +35,7 @@ sub run {
     move362aAfter245a($r);
     dropObsoleteFields($r);
     repairMissing084fromItems($bibliosMigrator, $r);
+    sanitizeCallNumber($r);
     };
     if ($@) {
         if ($@ =~ /FAIL/) {
@@ -171,7 +174,7 @@ sub repairPublicationYearFrom260c {
                 #Trying to get somekind of a year out of this, usually 260c seems to be like [198-?] or [19-?] etc.
                 elsif ($sf260c->content() =~ /(\d{2,4})/) {
                     my $year = $1;
-                    
+
                     while (length $year < 4) { #this created a length 4 string, as full length is reached on last loop iteration
                         $year .= '0';
                     }
@@ -307,6 +310,108 @@ sub repairMissing084fromItems {
         #print "Record '".$record->docId()." has no Items.'\n";
     }
 }
+=head sanitizeCallNumber
+First iterate all 084s and repair or drop invalid call numbers.
+If no valid call number is found, try to find one from 090
+Then drop all 090
+=cut
+sub sanitizeCallNumber {
+    my ($r) = @_;
+
+    sub repairCallNumber {
+        my ($callNumber) = @_;
+        $callNumber = '' if (! (defined $callNumber)); #prevent undef errors.
+
+        if ( ( length $callNumber < 3 && $callNumber !~ /^\d\d?$/ ) ||
+             ( length $callNumber > 2 && $callNumber !~ /^\d\d?\.\d*\D*$/) ) {
+            $callNumber =~ s/[ '\*#\[\]]//g; #remove nasty characters, as somehow they intrude here as well
+            $callNumber =~ s/,/./g; #replace , with .
+            $callNumber =~ s/\.\./\./; #replace .. with .
+            if (length $callNumber > 2) {
+                if ($callNumber =~ /^(\d\d?).?(\d*\D*)$/) { #create a dot for call numbers missing one
+                    $callNumber = $1.'.'.$2;
+                }
+            }
+
+            if ( ( length $callNumber < 3 && $callNumber !~ /^\d\d?$/ ) ||  #maybe sanitating resolves this error?
+               ( length $callNumber > 2 && $callNumber !~ /^\d\d?\.\d*\D*$/) ) {
+
+                if ($callNumber =~ /^(\s|\D)+$/ ||  #If content is only text
+                    $callNumber =~ /^........../) { #or bad and too long
+                    return ('DEL', $callNumber);
+                }
+                return ('WARN', $callNumber);
+            }
+            else {
+                return ('FIX', $callNumber);
+            }
+        }
+        return ('OK', $callNumber);
+    }
+
+    my $correctCallNumberFound;
+    if (my $f084a = $r->fields('084')) {
+        foreach my $f084 (@$f084a) {
+            if (my $sf084aa = $f084->subfields('a')) {
+                for (my $i=0 ; $i<scalar(@$sf084aa) ; $i++) {
+                    my $sf084a = $sf084aa->[$i];
+
+                    my ($resolution, $callNumber) = repairCallNumber( $sf084a->content() );
+                    if ($resolution eq 'OK') {
+                        $correctCallNumberFound = $callNumber;
+                    }
+                    elsif ($resolution eq 'DEL') {
+                        $f084->deleteSubfield($sf084a);
+                        $i--;
+                        #print("Record '".$r->docId()."' using Call number '$callNumber', bad Call number dropped\n");
+                    }
+                    elsif ($resolution eq 'WARN') {
+                        $sf084a->content( $callNumber );
+                        print("Record '".$r->docId()."' using Call number '".$sf084a->content()."', bad Call number preserved\n");
+                    }
+                    elsif ($resolution eq 'FIX') {
+                        $correctCallNumberFound = $callNumber;
+                        $sf084a->content( $callNumber );
+                        $statistics->{callNumberRepaired}++;
+                    }
+                    elsif ($resolution eq 'OK') {
+                        #Rejoice!
+                    }
+                    else {
+                        print("Record '".$r->docId()."' using Call number '".$sf084a->content()."', unknown call number repair resolution '$resolution'\n");
+                    }
+                }
+            }
+        }
+    }
+    unless ($correctCallNumberFound) {
+        if (my $f090a = $r->fields('090')) {
+            foreach my $f090 (@$f090a) {
+                if (my $sf090aa = $f090->subfields('a')) {
+                    for (my $i=0 ; $i<scalar(@$sf090aa) ; $i++) {
+                        my $sf090a = $sf090aa->[$i];
+
+                        my ($resolution, $callNumber) = repairCallNumber( $sf090a->content() );
+                        if ($resolution eq 'OK' || $resolution eq 'FIX') {
+                            my $sf084a = $r->getUnrepeatableSubfield('084', 'a');
+                            unless ($sf084a) {
+                                $sf084a = $r->addUnrepeatableSubfield('084', 'a', $callNumber);
+                            }
+                            else {
+                                $sf084a->content($callNumber);
+                            }
+                            $statistics->{callNumberSalvagedFrom090}++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    $r->deleteFields('090');
+    my $sf084a = $r->getUnrepeatableSubfield('084', 'a');
+    $r->deleteFields('084') unless $sf084a; #Drop 084 if it is empty.
+}
+
 
 sub printStatistics {
     my $count = 0;

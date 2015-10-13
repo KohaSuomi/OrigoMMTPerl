@@ -28,9 +28,7 @@ $Record =
 
 =cut
 
-use warnings;
-use strict;
-#use diagnostics;
+use Modern::Perl;
 
 use MMT::MARC::Field;
 use MMT::MARC::Subfield;
@@ -87,7 +85,7 @@ sub addField {
     my $fieldNumber;
 
     unless ($field) {
-        warn "Record '".$self->docId()."'. Trying to add field with no field code!\n";
+        print "Record '".$self->docId()."'. Trying to add field with no field code!\n";
         return undef;
     }
 
@@ -333,17 +331,24 @@ sub signum {
 sub materialType {
     my $self = shift;
     my $matType = shift;
+    
+    my $f245a = $self->getUnrepeatableSubfield('245','a');
+    if ($f245a && $f245a->content =~ /Ella ja Paterock/) {
+        my $break = 1;
+    }
+    
 
     if ($matType) {
         my $itype = TranslationTables::material_code_to_itype::fetch($matType);
         if (defined $itype && exists $itype->[0]) {
             $self->isASerial(1) if exists $itype->[1] && $itype->[1] == 1;
+            my $newMatType = $itype->[0];
 
-            $itype->[0] = MMT::Biblios::MarcRepair::convertAanikirjaItemtype($self, $itype->[0]);
-            $itype->[0] = MMT::Biblios::MarcRepair::convertYleItemTypes($self, $itype->[0]);
+            $newMatType = MMT::Biblios::MarcRepair::convertAanikirjaItemtype($self, $newMatType);
+            $newMatType = MMT::Biblios::MarcRepair::convertYleItemTypes($self, $newMatType);
 
-            $self->{materialType} = $itype->[0];
-            $self->addUnrepeatableSubfield('942', 'c', $itype->[0]); #Store the Koha 942$c default itemtype already.
+            $self->{materialType} = $newMatType;
+            $self->addUnrepeatableSubfield('942', 'c', $newMatType); #Store the Koha 942$c default itemtype already.
 
             if ($self->{materialType} eq 'DELETE') {
                 print "Record docId:".$self->docId()." material type: 'DELETE'. Deleting record.\n";
@@ -427,20 +432,21 @@ sub addUnrepeatableSubfield {
     my $subfieldContent = shift;
 
     unless ($fieldCode) {
-        warn "Record '".$self->docId()."'. Trying to add subfield with no field code!\n";
+        print "Record '".$self->docId()."'. Trying to add subfield with no field code!\n";
         return undef;
     }
     unless ($subfieldCode) {
-        warn "Record '".$self->docId()."'. Trying to add subfield for field '$fieldCode', but no subfield code!\n";
+        print "Record '".$self->docId()."'. Trying to add subfield for field '$fieldCode', but no subfield code!\n";
         return undef;
     }
     unless ($subfieldContent) {
-        warn "Record '".$self->docId()."'. Trying to add subfield for field '$fieldCode', subfield '$subfieldCode', but no subfield content!\n";
+        print "Record '".$self->docId()."'. Trying to add subfield for field '$fieldCode', subfield '$subfieldCode', but no subfield content!\n";
         return undef;
     }
 
     if (my $sf = $self->getUnrepeatableSubfield($fieldCode, $subfieldCode)) {
         $sf->content( $subfieldContent );
+        return $sf;
     }
     else {
         my $f = $self->getUnrepeatableField( $fieldCode );
@@ -451,6 +457,7 @@ sub addUnrepeatableSubfield {
 
         my $sf = MMT::MARC::Subfield->new( $subfieldCode, $subfieldContent );
         $f->addSubfield($sf);
+        return $sf;
     }
 }
 

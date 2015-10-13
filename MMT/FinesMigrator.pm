@@ -39,6 +39,7 @@ sub run {
     while (my $row = $csvStreamer->next()) {
         print MMT::Util::Common::printTime($startTime)." FinesMigrator - ".($csvStreamer->{i}+1)."\n" if $csvStreamer->{i} % 1000 == 999;
         my $object = MMT::Objects::Fine->constructor($self, $row);
+        next unless $object;
 
         print $objOut $object->toString()."\n";
         $object->DESTROY(); #Prevent memory leaking.
