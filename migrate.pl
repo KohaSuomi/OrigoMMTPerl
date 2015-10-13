@@ -12,6 +12,7 @@ use MMT::CheckoutsMigrator;
 use MMT::FinesMigrator;
 use MMT::HoldsMigrator;
 use MMT::RotatingCollectionsMigrator;
+use MMT::AcquisitionsMigrator;
 
 use Carp;
 $SIG{ __DIE__ } = sub { Carp::confess( @_ ) };
@@ -27,6 +28,7 @@ my $checkouts = 0;
 my $fines = 0;
 my $holds = 0;
 my $rotatingCollections = 0;
+my $acquisitions = 0;
 
 GetOptions(
             'h|help'         => \$help,
@@ -40,6 +42,7 @@ GetOptions(
             'f|fines'        => \$fines,
             'H|holds'        => \$holds,
             'r|rotating-collections' => \$rotatingCollections,
+            'a|acquisitions' => \$acquisitions,
 );
 
 if ($help) {
@@ -50,7 +53,7 @@ HELP
 
 
 if ($migrateAll) {
-    ($biblios, $items, $borrowers, $checkouts, $fines, $holds) = (1,1,1,1,1,1);
+    ($biblios, $items, $borrowers, $checkouts, $fines, $holds, $rotatingCollections, $acquisitions) = (1,1,1,1,1,1,1,1);
 }
 
 
@@ -93,4 +96,8 @@ if ($holds) {
 if ($rotatingCollections) {
     my $rm = MMT::RotatingCollectionsMigrator->new({verbose => $verbose});
     $rm->run();
+}
+if ($acquisitions) {
+    my $am = MMT::AcquisitionsMigrator->new({verbose => $verbose});
+    $am->run();
 }

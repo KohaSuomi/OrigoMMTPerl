@@ -261,7 +261,7 @@ sub convertYleItemTypes {
     if ($materialType eq 'Yle: dvd') {
         $statistics->{convertYleItemtype}++;
         $r->{overrides}->{items}->{coded_location_qualifier} = 'yle'; #This is passed to the MarcRepository
-        return 'VI';
+        return 'DV';
     }
 
     return $materialType;

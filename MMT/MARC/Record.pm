@@ -230,6 +230,29 @@ sub docId {
     }
     return $self->{docId};
 }
+sub publicationDate {
+    my ($self, $publicationDate) = @_;
+
+    if ($publicationDate) {
+        my $sf008 = $self->getUnrepeatableSubfield('008','a');
+        if ($sf008 && $sf008->content() =~ /^(.{7}).{4}(.+)$/) {
+            $sf008->content( $1.$publicationDate.$2 );
+        }
+        else {
+            $self->addUnrepeatableSubfield('008', 'a', "       $publicationDate    ");
+        }
+        $self->{publicationDate} = $publicationDate;
+        return $publicationDate;
+    }
+    unless ($self->{publicationDate}) {
+        my $sf008 = $self->getUnrepeatableSubfield('008','a');
+        if ($sf008 && $sf008->content() =~ /^.{7}(\d{4}).+$/) {
+            $self->{publicationDate} = $1;
+        }
+    }
+
+    return $self->{publicationDate} || '';
+}
 sub status {
     my $self = shift;
     my $status = shift;
@@ -332,10 +355,10 @@ sub materialType {
     my $self = shift;
     my $matType = shift;
     
-    my $f245a = $self->getUnrepeatableSubfield('245','a');
-    if ($f245a && $f245a->content =~ /Ella ja Paterock/) {
-        my $break = 1;
-    }
+#    my $f245a = $self->getUnrepeatableSubfield('245','a');
+#    if ($f245a && $f245a->content =~ /Ella ja Paterock/) {
+#        my $break = 1;
+#    }
     
 
     if ($matType) {

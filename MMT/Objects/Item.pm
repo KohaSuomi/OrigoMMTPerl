@@ -68,6 +68,47 @@ sub constructor {
     return $s;
 }
 
+=head acquisitionConstructor
+Make a Item-object from an Acquisition row.
+=cut
+
+sub acquisitionConstructor {
+    my ($class, $controller, $columns) = @_;
+    my $s = {};
+    bless($s, $class);
+    $s->{controller} = $controller; #Create a temporary reference to the controller containing all the repositories
+    $s->{c} = $columns;
+
+    eval {
+    ##Column mapping rules
+    $s->itemnumber(0);           #1 ID
+    $s->{barcode} = "__HANK_".substr($columns->[0],0,8).'-'.int(rand(9999));
+    $s->{notforloan} = -1;       #Status = koha.authorised_values.authorised_value == -1 => 'Tilattu'
+    $s->biblionumber(1);         #2 TeosID
+    $s->homebranch(3);           #4 Piste
+    $s->holdingbranch(3);        #4 Piste
+    $s->permanent_location(3,4); #4 Piste, 5 Osasto
+    $s->price(5);                #6 Hinta
+    $s->replacementprice(5);     #6 Hinta
+    $s->{replacementpricedate} = $columns->[9]; #10 Tilausaika
+    $s->itemnotes(12);           #13 Lisatiedot
+    $s->itype();                 #From MarcRepository
+    $s->coded_location_qualifier();#From MarcRepository
+    };
+    if ($@) {
+        if ($@ =~ /BADPARAM/) {
+            return undef;
+        }
+        else {
+            print $@;
+        }
+    }
+
+    delete $s->{controller}; #remove the excess references.
+    delete $s->{c};
+    return $s;
+}
+
 sub itemnumber {
     my ($s, $c1) = @_;
 
@@ -104,7 +145,7 @@ sub homebranch {
     }
 
     my $homebranch = TranslationTables::branch_translation::translatePiste($homebranchId);
-    if ($homebranch eq 'DELETE') {
+    if ($homebranch && $homebranch eq 'DELETE') {
         print $s->_errorPk("'5 Kotipiste' is DELETE");
         die "BADPARAM";
     }
@@ -223,6 +264,11 @@ sub statuses {
     elsif ($status == 11) { #Kie Pois kierrosta
         $s->{withdrawn} = 1;
     }
+
+    if ($s->{permanent_location} eq 'REF') {
+        $s->{notforloan} = 1;
+    }
+    
 }
 sub price {
     my ($s, $c1) = @_;
@@ -242,8 +288,8 @@ sub replacementprice {
 }
 sub itemnotes {
     my ($s, $c1, $c2) = @_;
-    my $checkoutNote = $s->{c}->[$c1];
-    my $checkinNote = $s->{c}->[$c2];
+    my $checkoutNote = $s->{c}->[$c1] if $c1;
+    my $checkinNote = $s->{c}->[$c2] if $c2;
 
     $checkinNote = '' unless $checkinNote;
     $checkoutNote = '' unless $checkoutNote;

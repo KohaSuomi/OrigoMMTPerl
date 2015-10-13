@@ -14,7 +14,7 @@ use MMT::Util::Common;
 use MMT::MARC::Printer;
 
 
-my %available001; #Collect available component parent ID's here so we can verify that 773$w points somewhere.
+my %available001andPublicationDate; #Collect available component parent ID's here so we can verify that 773$w points somewhere.
 my %linking773w; #Collect component part record id's and their parent references here.
 my $startTime = time();
 my $threads = [];
@@ -63,12 +63,19 @@ sub run {
             $i++;
             next if ($CFG::CFG->{Biblios}->{skip} && $CFG::CFG->{Biblios}->{skip} >= $i);
             last if ($CFG::CFG->{Biblios}->{count} && $CFG::CFG->{Biblios}->{count} >= $count);
-    
+
             print MMT::Util::Common::printTime($startTime)." BibliosMigrator - (".$self->{threadId}.") ".($i+1)."\n" if $i % 1000 == 999;
+
+            #Fetch data from a possible component parent.
+            getParentPublicationDate($record);
+
             next() unless ($self->handleRecord($i, $record));
             next() unless (MMT::Biblios::MarcRepair::run($self, $record));
             MMT::MARC::Printer::writeRecord($record);
             $self->{repositories}->{MarcRepository}->put($record);
+
+            saveRecord($record);
+
             $record->DESTROY(); #Prevent memory leaking.
             $count++;
         }
@@ -119,17 +126,10 @@ sub nextXML {
 sub handleRecord {
     my ($self, $i, $record) = @_;
 
-    my $id = $record->getUnrepeatableSubfield('001','a');
+    my $id = $record->docId();
     unless ($id) {
         warn "No Field 001 for Record number $i\n";
         return undef;
-    }
-    $id = $id->content();
-
-    #Save Record's ID and possible linking targets, so we can validate them.
-    $available001{$id} = 1;
-    if (my $cParentId = $record->getComponentParentDocid()) {
-        $linking773w{$id} = $cParentId;
     }
 
     eval {
@@ -158,12 +158,34 @@ sub handleRecord {
     return 1;
 }
 
+=getParentPublicationDate
+Get the missing parent publication date from a possible component part.
+=cut
+sub getParentPublicationDate {
+    my ($record) = @_;
+
+    my $publicationDate = $available001andPublicationDate{ $record->getComponentParentDocid() };
+    $record->publicationDate($publicationDate) if (not($record->publicationDate()) && $publicationDate);
+}
+
+sub saveRecord {
+    my ($record) = @_;
+
+    #Save Record's ID and possible linking targets, so we can validate them.
+    my $id = $record->docId();
+    my $publicationDate = $record->publicationDate();
+    $available001andPublicationDate{$id} = $publicationDate;
+    if (my $cParentId = $record->getComponentParentDocid()) {
+        $linking773w{$id} = $cParentId;
+    }
+}
+
 sub validateLinkRelations {
     my ($self) = @_;
 
     print "\n\n".MMT::Util::Common::printTime($startTime)." BibliosMigrator - Validating link relations\n\n";
     while (my ($componentPartId, $componentParentId) = each(%linking773w)) {
-        unless($available001{$componentParentId}) {
+        unless($available001andPublicationDate{$componentParentId}) {
             print "Component part '$componentPartId' doesn't have a component parent!\n"
         }
     }

@@ -171,8 +171,24 @@ my $svr = {
     {parser => 'string', type => 'string'}, #4 ViivakoodiNimi
 ],
 
-"Hankinta.txt" => [
-#    'EI TARVITA'
+"Hankinta.txt" => [ # -> koha.items
+    {parser => 'string', type => 'key'},      #1 ID - #0401077E-0104-11D2-B24C-00104B5471B8
+    {parser => 'string', type => 'key'},      #2 TeosID - #0401077E-0104-11D2-B24C-00104B5471B8
+    {parser => 'string', type => 'key'},      #3 ToimittajaID - #0401077E-0104-11D2-B24C-00104B5471B8
+    {parser => 'int', type => 'int'},         #4 Piste
+    {parser => 'int', type => 'int'},         #5 Kotiosasto
+    {parser => 'string', type => 'double'},   #6 Hinta
+    {parser => 'int', type => 'int'},         #7 Lukumaara
+    {parser => 'int', type => 'int'},         #8 ALVprosentti
+    {parser => 'string', type => 'double'},   #9 AlennusProsentti
+    {parser => 'string', type => 'datetime'}, #10 Tilausaika - 2005-04-27 11:11:04.403
+    {parser => 'string', type => 'datetime'}, #11 Syottoaika - 2005-04-27 11:11:04.403
+    {parser => 'string', type => 'boolean'},  #12 Tilattu (False|True)
+    {parser => 'string', type => 'string'},   #13 Lisatiedot
+    {parser => 'string', type => 'datetime'}, #14 TallennusPvm - 2005-04-27 11:11:04.403
+    {parser => 'int', type => 'int'},         #15 Lisaaja
+    {parser => 'int', type => 'int'},         #16 Tallentaja
+    {parser => 'string', type => 'boolean'},  #17 TilataanSidonta. Oi sido minut!
 ],
 
 "Laina.txt" => [ # -> koha.issues
