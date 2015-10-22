@@ -37,7 +37,7 @@ sub run {
 
     print "\n\n".MMT::Util::Common::printTime($startTime)." AcquisitionsMigrator - Starting\n\n";
 
-    open(my $objOut, ">>:encoding(utf8)", $CFG::CFG->{targetDataDirectory}."Nide.migrateme") or die "$!";
+    open(my $objOut, ">:encoding(utf8)", $CFG::CFG->{targetDataDirectory}."Hankinta.migrateme") or die "$!";
     my $csvStreamer = MMT::Util::CSVStreamer->new($CFG::CFG->{origoValidatedBaseDir}."Hankinta.csv",
                                                   '<');
 

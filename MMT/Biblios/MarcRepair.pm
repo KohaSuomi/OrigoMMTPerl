@@ -9,6 +9,7 @@ my $statistics = {};
 $statistics->{cleanEmptyField} = 0;
 $statistics->{remove856azDuplicates} = 0;
 $statistics->{repairPublicationYearFrom260c} = 0;
+$statistics->{repairPublicationYearFrom008} = 0;
 $statistics->{convertAanikirjaItemtype} = 0;
 $statistics->{convertYleItemtype} = 0;
 $statistics->{removeTitlelessRecords} = 0;
@@ -30,7 +31,7 @@ sub run {
     removeTitlelessRecords($r);
     cleanEmptyFields($r);
     remove856azDuplicates($r);
-    repairPublicationYearFrom260c($r);
+    repairPublicationYear($r);
     mergeSeparate260($r);
     move362aAfter245a($r);
     dropObsoleteFields($r);
@@ -139,7 +140,7 @@ sub remove856azDuplicates {
     }
 }
 
-sub repairPublicationYearFrom260c {
+sub repairPublicationYear {
     my $r = shift;
 
     sub repair008 {
@@ -160,11 +161,20 @@ sub repairPublicationYearFrom260c {
             print('repairPublicationYearFrom260c(): Record docid '.$r->docId().' has malformed field 008!');
         }
     }
+    sub repair260cFrom008 {
+        my $r = shift;
+        my $year = shift;
+
+        $r->addUnrepeatableSubfield('260','c', $year);
+        $statistics->{repairPublicationYearFrom008}++;
+    }
 
     if (my $sf008 = $r->getUnrepeatableSubfield('008','a') ) {
 
-        if ($sf008->content() =~ /^.{7}\d{4}/) {
-            #All is as it should be, so no repairing needed.
+        if ($sf008->content() =~ /^.{7}(\d{4})/) {
+            unless ($r->getUnrepeatableSubfield('260','c')) {
+                repair260cFrom008($r, $1);
+            }
         }
         else {
             if (my $sf260c = $r->getUnrepeatableSubfield('260','c') ) {
@@ -272,8 +282,8 @@ sub move362aAfter245a {
 
     if (my $sf362a = $r->getUnrepeatableSubfield('362', 'a')) {
         if (my $sf245a = $r->getUnrepeatableSubfield('245', 'a')) {
-            my @enumerations = split(':',$sf362a->content());
-            $sf245a->content( $sf245a->content . ' ' . $enumerations[0] . ' : ' . $enumerations[1] );
+            my @enumerations = split('\s?:\s?',$sf362a->content());
+            $sf245a->content( $sf245a->content . ' ' . join(' : ', @enumerations) );
             $statistics->{move362aAfter245a}++;
         }
 

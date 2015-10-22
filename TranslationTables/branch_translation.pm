@@ -44,10 +44,10 @@ sub translatePiste {
 }
 
 sub translateKunta {
-    my ($code) = @_;
+    my ($code, $noWarning) = @_;
 
     my $value = $kirkasKunnat->{$code} if defined($code);
-    unless ($value) {
+    if (not($value) && not($noWarning)) {
         print "Missing municipality translation code '$code'\n";
         return;
     }

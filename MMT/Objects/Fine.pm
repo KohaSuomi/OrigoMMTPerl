@@ -29,7 +29,8 @@ sub constructor {
     $s->date(4);           #5 Luontipaiva
     $s->amount(5);         #6 Maksumaara
     $s->amountoutstanding(); # amount() ->
-    $s->descriptionAndAccounttype(3,8,10);  #4 Luontipiste + 9 VarausID + 11 Lisatiedot
+    $s->description(3,8,10); #4 Luontipiste + 9 VarausID + 11 Lisatiedot
+    $s->accounttype(1);    #2 Tyyppi
     };
     if ($@) {
         if ($@ =~ /BADPARAM/) {
@@ -85,7 +86,7 @@ sub amountoutstanding {
     my ($s) = @_;
     $s->{amountoutstanding} = $s->{amount};
 }
-sub descriptionAndAccounttype {
+sub description {
     my ($s, $c1, $c2, $c3) = @_;
     my $branchcodeId = $s->{c}->[$c1]; #4 Luontipiste
     my $reservationId = $s->{c}->[$c2]; #9 VarausID
@@ -103,7 +104,17 @@ sub descriptionAndAccounttype {
     push @descriptions, $info if $info;
 
     $s->{description} = join(' ][ ', @descriptions);
-    $s->{accounttype} = 'KONVE';
+}
+sub accounttype {
+    my ($s, $c1) = @_;
+    my $accounttype = $s->{c}->[$c1];
+
+    unless (defined($accounttype)) {
+        print $s->_errorPk("No mandatory column '2 Tyyppi'");
+        $s->{accounttype} = 'KONVE';
+        return;
+    }
+    $s->{accounttype} = $accounttype;
 }
 
 1;

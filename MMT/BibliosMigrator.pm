@@ -98,7 +98,7 @@ sub run {
 				    $thread->join();
 				    splice @$threads, $ti, 1;
 			    }
-		    }	
+		    }
 		}
     } ##EO Threaded programming
     ### Synchronous programming HERE ###

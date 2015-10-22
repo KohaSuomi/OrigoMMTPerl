@@ -28,9 +28,9 @@ sub constructor {
     $s->biblionumber(0);   #1 ID -> Varausrivi
     $s->itemnumber(2);     #3 NideID
     $s->branchcode(5);     #6 Noutopiste
+    $s->waitingdate(7);    #8 Saapumispaiva -> found = 'W'
     $s->priority(0);       #1 ID -> Varausrivi
     $s->reservedate(6);    #7 Luontipaiva
-    $s->waitingdate(7);    #8 Saapumispaiva -> found = 'w'
     $s->expirationdate(8); #9 Viimeinenpaiva
     $s->suspend_until(12); #13 Alkamispaiva
     $s->reservenotes(16);  #17 Lisatiedot
@@ -115,6 +115,17 @@ sub branchcode {
         $s->{branchcode} = $branchcode;
     }
 }
+sub waitingdate {
+    my ($s, $c1) = @_;
+    my $arrivalDate = $s->_KohalizeDate($s->{c}->[$c1]);
+
+    unless ($arrivalDate) {
+        return;
+    }
+
+    $s->{waitingdate} = $arrivalDate;
+    $s->{found} = 'W';
+}
 sub priority {
     my ($s, $c1) = @_;
     my $reservationID = $s->{c}->[$c1];
@@ -136,6 +147,14 @@ sub priority {
         print $s->_error("No Jarjestys in authority 'Varausrivi'.");
         die "BADPARAM";
     }
+
+    #In Koha a found priority is 0, in Origo it is 1.
+    if ($s->{found}) {
+        if ($priority != 1) {
+            print $s->_errorPk("Holds is found but priority is not 0.");
+        }
+        $priority = "0";
+    }
     $s->{priority} = $priority;
 }
 sub reservedate {
@@ -148,17 +167,6 @@ sub reservedate {
     }
 
     $s->{reservedate} = $createDate;
-}
-sub waitingdate {
-    my ($s, $c1) = @_;
-    my $arrivalDate = $s->_KohalizeDate($s->{c}->[$c1]);
-
-    unless ($arrivalDate) {
-        return;
-    }
-
-    $s->{waitingdate} = $arrivalDate;
-    $s->{found} = 'W';
 }
 sub expirationdate {
     my ($s, $c1) = @_;

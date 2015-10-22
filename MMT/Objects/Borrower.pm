@@ -37,7 +37,7 @@ sub constructor {
     $s->email(25);           #26 Sahkoposti
     $s->phonesAndMobiles(28);#29 KontaktiID -> Puhelin.csv
     $s->dateofbirth(21);     #22 Syntymaaika
-    $s->branchcode(1);       #2 Kotikunta
+    $s->branchcode(1);       #cardnumber() or 2 Kotikunta
     $s->dateenrolled(11);    #12 LisaysPvm
     $s->dateexpiry(3);       #4 VoimassaLoppu
     $s->guarantorid(16);     #17 TakaajaID
@@ -275,6 +275,14 @@ sub dateofbirth {
 sub branchcode {
     my ($s, $c1) = @_;
     my $municipalityCode = $s->{c}->[$c1];
+
+    #Try defaulting to the first three numbers in the borrower's cardnumber.
+    if ($s->{cardnumber} && $s->{cardnumber} =~ /^(\d{3})/) {
+        if (my $homebranch = TranslationTables::branch_translation::translateKunta($municipalityCode, 'noWarning')) {
+            $s->{branchcode} = $homebranch;
+            return 1;
+        }
+    }
 
     unless (defined($s->{c}->[$c1])) {
         print $s->_error("Missing column '2 Kotikunta'");
