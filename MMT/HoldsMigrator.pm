@@ -38,13 +38,21 @@ sub run {
     my $csvStreamer = MMT::Util::CSVStreamer->new($CFG::CFG->{origoValidatedBaseDir}."Varaus.csv",
                                                   '<');
 
+    #Prepare the holds for sorting in a proper order so it is easy to maintain priorities based on reservedate when merging holds.
+    my @holds;
     while (my $row = $csvStreamer->next()) {
         print MMT::Util::Common::printTime($startTime)." HoldsMigrator - ".($csvStreamer->{i}+1)."\n" if $csvStreamer->{i} % 1000 == 999;
         my $object = MMT::Objects::Hold->constructor($self, $row);
         next unless $object;
 
-        print $objOut $object->toString()."\n";
-        $object->DESTROY(); #Prevent memory leaking.
+        push @holds, $object;
+    }
+
+    @holds = sort {sprintf("%050s",$a->{biblionumber}).$a->{reservedate}.sprintf("%04d",$a->{priority}) cmp sprintf("%050s",$a->{biblionumber}).$b->{reservedate}.sprintf("%04d",$a->{priority})} @holds;
+    foreach my $h (@holds) {
+        
+        print $objOut $h->toString()."\n";
+        $h->DESTROY(); #Prevent memory leaking.
     }
     $csvStreamer->close();
     close($objOut);

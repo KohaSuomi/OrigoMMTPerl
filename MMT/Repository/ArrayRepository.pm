@@ -81,7 +81,7 @@ sub loadFromPregeneratedFile {
 
         #If we get shared ID's just put the values side-by-side
         if ($columns{$pk}) {
-            if(ref($columns{$pk}) eq 'ARRAY') {
+            if(ref($columns{$pk}) eq 'ARRAY' && ref($columns{$pk}->[0]) eq 'ARRAY') {
                 push @{$columns{$pk}}, $row;
             }
             else {

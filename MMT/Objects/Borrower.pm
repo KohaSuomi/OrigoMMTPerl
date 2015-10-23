@@ -38,7 +38,7 @@ sub constructor {
     $s->phonesAndMobiles(28);#29 KontaktiID -> Puhelin.csv
     $s->dateofbirth(21);     #22 Syntymaaika
     $s->branchcode(1);       #cardnumber() or 2 Kotikunta
-    $s->dateenrolled(11);    #12 LisaysPvm
+    $s->dateenrolled(11,12); #12 LisaysPvm, 13 TallennusPvm
     $s->dateexpiry(3);       #4 VoimassaLoppu
     $s->guarantorid(16);     #17 TakaajaID
     $s->categorycode(15);    #16 Asiakastyyppi -> AuktAsiakastyyppi.csv
@@ -96,6 +96,10 @@ sub cardnumber {
         $s->{categorycode} = 'TAKAAJA';
         return;
     }
+
+#if ($s->{borrowernumber} eq '0400DE35-0104-11D2-B24C-00104B5471B8') {
+#    print "Breakpoint";
+#}
 
     $barcodes = [$barcodes] unless ref($barcodes) eq 'ARRAY';
     $barcodes = [$barcodes] unless ref($barcodes->[0]) eq 'ARRAY';
@@ -334,14 +338,16 @@ sub categorycode {
     $s->{categorycode} = $categorycode;
 }
 sub dateenrolled {
-    my ($s, $c1) = @_;
+    my ($s, $c1, $c2) = @_;
     my $dateAdded = $s->{c}->[$c1];
+    my $dateModified = $s->{c}->[$c2];
 
-    unless (defined($dateAdded)) {
-        print $s->_error("Missing column '12 LisaysPvm'");
-        return;
+    my $date = $s->_KohalizeDate($dateAdded);
+    unless ($date) {
+        $date = $s->_KohalizeDate($dateModified);
     }
-    $s->{dateenrolled} = $dateAdded;
+
+    $s->{dateenrolled} = $date;
 }
 sub dateexpiry {
     my ($s, $c1) = @_;
