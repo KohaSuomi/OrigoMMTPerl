@@ -19,6 +19,7 @@ $statistics->{removeExtraFields} = 0;
 $statistics->{repairMissing084fromItems} = 0;
 $statistics->{callNumberRepaired} = 0;
 $statistics->{callNumberSalvagedFrom090} = 0;
+$statistics->{enableComponentPartNoteController773i1} = 0;
 
 sub run {
     my ($bibliosMigrator, $r) = @_;
@@ -37,6 +38,7 @@ sub run {
     dropObsoleteFields($r);
     repairMissing084fromItems($bibliosMigrator, $r);
     sanitizeCallNumber($r);
+    enableComponentPartNoteController773i1($r);
     };
     if ($@) {
         if ($@ =~ /FAIL/) {
@@ -422,6 +424,19 @@ sub sanitizeCallNumber {
     $r->deleteFields('084') unless $sf084a; #Drop 084 if it is empty.
 }
 
+sub enableComponentPartNoteController773i1 {
+    my ($r) = @_;
+
+    if (my $f773a = $r->fields('773')) {
+        foreach my $f773 (@$f773a) {
+            my $i1 = $f773->indicator1();
+            unless ($i1 && $i1 eq '0') {
+                $f773->setIndicator1('0');
+                $statistics->{enableComponentPartNoteController773i1}++;
+            }
+        }
+    }
+}
 
 sub printStatistics {
     my $count = 0;

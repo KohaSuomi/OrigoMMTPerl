@@ -26,6 +26,7 @@ our $tablePielinen = {
 };
 
 our $tableKirkas = {
+    0 => 'HENKILO', #Not defined in the Origo dump, but user reports state that these are legit 'HENKILO'.
     1 => 'HENKILO', #henkilö
     2 => 'TAKAAJA', #takaaja
     3 => 'KAUKOLAINA', #muun kunnan kirjasto
