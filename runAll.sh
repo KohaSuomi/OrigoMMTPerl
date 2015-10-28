@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 #perl migrate.pl -p &> logs/1.preprocess.log
 perl migrate.pl -b &> logs/2.biblios.log
 perl migrate.pl -i &> logs/3.items.log

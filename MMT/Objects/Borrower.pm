@@ -104,7 +104,7 @@ sub cardnumber {
     $barcodes = [$barcodes] unless ref($barcodes) eq 'ARRAY';
     $barcodes = [$barcodes] unless ref($barcodes->[0]) eq 'ARRAY';
     ##Find the top priority card. While doing that look for SSNs
-    my ($topPriority, $topPriorityIndex, $ssn) = (0,0,'');
+    my ($topPriority, $topPriorityIndex, $ssn) = (9999,0,''); #Top priority is 0
     for (my $i=0 ; $i<scalar(@$barcodes); $i++) {
         my $bc = $barcodes->[$i];
 
@@ -114,7 +114,7 @@ sub cardnumber {
             next();
         }
 
-        if ($bc->[2] > $topPriority) { #Priority column
+        if ($bc->[2] < $topPriority) { #Priority column
             $topPriority = $bc->[2];
             $topPriorityIndex = $i;
         }
@@ -147,7 +147,7 @@ sub othernames {
     my ($s) = @_;
     my $sn = $s->{surname} || '';
     my $fn = $s->{firstname} || '';
-    $s->{othernames} = $sn.','.$fn.int(rand(100));
+    $s->{othernames} = $sn.','.$fn.int(rand(10000));
 }
 sub addresses {
     my ($s, $c1) = @_;
@@ -216,12 +216,13 @@ sub email {
 my $smsValidatorMonster = qr/(((90[0-9]{3})?0|\+358([-\s])?)(?!(100|20(0|2(0|[2-3])|9[8-9])|300|600|700|708|75(00[0-3]|(1|2)\d{2}|30[0-2]|32[0-2]|75[0-2]|98[0-2])))(4|50|10[1-9]|20(1|2(1|[4-9])|[3-9])|29|30[1-9]|71|73|75(00[3-9]|30[3-9]|32[3-9]|53[3-9]|83[3-9])|2|3|5|6|8|9|1[3-9])([-\s])?(\d{1,3}[-\s]?){2,12}\d)/;
 sub phonesAndMobiles {
     my ($s, $c1) = @_;
-    unless ($s->{c}->[$c1]) {
+    my $contactID = $s->{c}->[$c1];
+    unless ($contactID) {
         print $s->_error("Missing column '$c1'");
         return;
     }
 
-    my $puhelins = $s->{controller}->{repositories}->{Puhelin}->fetch( $s->{c}->[$c1] );
+    my $puhelins = $s->{controller}->{repositories}->{Puhelin}->fetch( $contactID );
     return unless ($puhelins);
     $puhelins = [$puhelins] unless ref($puhelins) eq 'ARRAY';
     $puhelins = [$puhelins] unless ref($puhelins->[0]) eq 'ARRAY';
@@ -230,40 +231,38 @@ sub phonesAndMobiles {
     for(my $i=0; $i<scalar(@$puhelins) ; $i++) {
         my $pho = $puhelins->[$i];
         unless ($pho) { #Deal with possible undef order indexes.
-            splice(@$puhelins, $i, 1);
-            $i--;
             next;
         }
-        my $a = {
-            number => $pho->[2], #2 Numero
-            forSms => $pho->[3], #4 Tekstiviestit
-        };
+        my $number = $pho->[2]; #3 Numero
+        my $type = $pho->[3];   #4 Tyyppi
+        my $smsOk = ($pho->[4] && $pho->[4] =~ /true/i) ? 1 : 0;   #5 Tekstiviestit, translate boolean
 
-        #See if we can use this as a smsalertnumber
-        if ($a->{forSms}) {
-            if ($a->{forSms} =~ /$smsValidatorMonster/) {
-                $s->{smsalertnumber} = $1;
-            }
-            else {
-                print $s->_errorNoDump("Borrower ID '".$s->{borrowernumber}."', Bad smsalertnumber '".$a->{number}."'");
-            }
+        unless ($number) {
+            print $s->_errorNoDump("Borrower ID '".$s->{borrowernumber}."', ContactID '$contactID', Undefined number");
+            next();
         }
 
-        #Add phones in order.
-        if ($i == 0) {
-            $s->{phone} = $a->{number};
+        #Add phones by type
+        if ($type == 0) {
+            $s->{phone} = $number;
         }
-        elsif ($i == 1) {
-            $s->{mobile} = $a->{number};
+        elsif ($type == 1) {
+            $s->{altcontactphone} = $number;
         }
-        elsif ($i == 2) {
-            $s->{altcontactphone} = $a->{number};
+        elsif ($type == 2) {
+            if ($smsOk) {
+                if ($number =~ /$smsValidatorMonster/) {
+                    $s->{smsalertnumber} = $1;
+                }
+                else {
+                    print $s->_errorNoDump("Borrower ID '".$s->{borrowernumber}."', ContactID '$contactID', Bad smsalertnumber '".$number."'");
+                }
+            }
+            $s->{mobile} = $number;
         }
-        elsif ($i == 3) {
-            $s->{phonepro} = $a->{number};
-        }
-        elsif ($i > 3) {
-            #We can only support 4 alternate phones.
+        elsif ($type > 2) {
+            print $s->_errorNoDump("Borrower ID '".$s->{borrowernumber}."', ContactID '$contactID' unknown phone type '$type'");
+            $s->{phonepro} = $number;
         }
     }
 }
@@ -282,7 +281,8 @@ sub branchcode {
 
     #Try defaulting to the first three numbers in the borrower's cardnumber.
     if ($s->{cardnumber} && $s->{cardnumber} =~ /^(\d{3})/) {
-        if (my $homebranch = TranslationTables::branch_translation::translateKunta($municipalityCode, 'noWarning')) {
+        my $municipalityCodeFromBarcode = $1;
+        if (my $homebranch = TranslationTables::branch_translation::translateKunta($municipalityCodeFromBarcode, 'noWarning')) {
             $s->{branchcode} = $homebranch;
             return 1;
         }
@@ -347,7 +347,7 @@ sub dateenrolled {
         $date = $s->_KohalizeDate($dateModified);
     }
 
-    $s->{dateenrolled} = $date;
+    $s->{dateenrolled} = $date if $date;
 }
 sub dateexpiry {
     my ($s, $c1) = @_;
@@ -409,7 +409,7 @@ sub password {
     }
 
     if (length($password) < 5) {
-        print $s->_errorNoDump("Borrower ID '".$s->{borrowernumber}."'. Password is less than 4 characters. Password invalidated.");
+        #print $s->_errorNoDump("Borrower ID '".$s->{borrowernumber}."'. Password is less than 4 characters. Password invalidated.");
         $password = rand(9999999999)+1000;
         $s->_addNote("Liian heikko salasana poistettu");
     }
@@ -426,7 +426,7 @@ sub userid {
     elsif ($s->_findSSN($tunnus)) {
         $tunnus = rand(9999999999)+1000;
         $s->_addNote("Sotu käyttäjätunnuksena on poistettu");
-        print $s->_errorNoDump("Borrower ID '".$s->{borrowernumber}."'. SSN as username invalidated.");
+        #print $s->_errorNoDump("Borrower ID '".$s->{borrowernumber}."'. SSN as username invalidated.");
     }
     $s->{userid} = $tunnus;
 }

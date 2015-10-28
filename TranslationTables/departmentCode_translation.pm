@@ -40,6 +40,7 @@ our $departmentCodeKirkas = {
     16 => "KIVK", #VK Käsikirjasto, varasto
     7 => "KIS",   #S Siirtolaina
     15 => "KIV",  #V Varasto
+    25 => "",     #VL Varasto, lasten ja nuorten kir  :(
 },
 3 => "",       #KA Kirkas-auto
 
@@ -80,11 +81,19 @@ our $departmentCodeKirkas = {
     3 => "PKKO",  #Ko Kotiseutukokoelma
     4 => "PKL",   #L Lasten osasto
     5 => "PKN",   #N Nuorten osasto
+    6 => "PKNA",  #NA Nuorten aikuisten osasto        :(
+    7 => "PKS",   #S Siirtolaina                      :(
+    8 => "PKV",   #VA Varasto                         :(
     10 => "PKNV", #VN Nuorten varasto
     11 => "PKLE", #LE Lehtiosasto
+    12 => "PKKH", #KH Kirjaston henkilökunta          :(
     14 => "PKO",  #O Oheislukemisto
+    15 => "PKV",  #V Varasto                          :(
+    25 => "PKLV", #VL Varasto, lasten ja nuorten kir  :(
     30 => "PKM",  #M Musiikkiosasto
     31 => "PKV",  #A:V Aikuisten varasto => Varasto
+    32 => "PKLE", #SA Lehtiosasto aikakau             :(
+    39 => "PKLE", #KP Kotipalvelu                     :(
 },
 };
 

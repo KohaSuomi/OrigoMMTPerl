@@ -44,6 +44,7 @@ sub _toStringRecursion {
                 _toStringRecursion($value, $sb);
             }
             else {
+                print "Undefined: $key\n" unless(defined($p->{$key}));
                 $p->{$key} =~ s/'/\\'/g; #Sanitate quotation marks
                 $p->{$key} = Encode::decode_utf8($p->{$key}); # set the flag
 
