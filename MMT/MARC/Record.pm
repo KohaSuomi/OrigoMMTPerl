@@ -340,12 +340,30 @@ sub signum {
 
     unless ($self->{signum}) {
         #Get the proper SIGNUM (important) Use one of the Main Entries or the Title Statement
+        my $leader = $self->leader(); #If this is a video, we calculate the signum differently, 06 = 'g'
         my $signumSource; #One of fields 100, 110, 111, 130, or 245 if 1XX is missing
-        if (($signumSource = $self->getUnrepeatableSubfield('100', 'a')) ||
-            ($signumSource = $self->getUnrepeatableSubfield('110', 'a')) ||
-            ($signumSource = $self->getUnrepeatableSubfield('111', 'a')) ||
-            ($signumSource = $self->getUnrepeatableSubfield('130', 'a')) ||
-            ($signumSource = $self->getUnrepeatableSubfield('245', 'a')) ) {
+        my $nonFillingCharacters = 0;
+
+        if (substr($leader,6,1) eq 'g' && $signumSource = $self->getUnrepeatableSubfield('245', 'a')) {
+            $nonFillingCharacters = $signumSource->parent()->indicator2();
+        }
+        elsif ($signumSource = $self->getUnrepeatableSubfield('100', 'a')) {
+            
+        }
+        elsif ($signumSource = $self->getUnrepeatableSubfield('110', 'a')) {
+            
+        }
+        elsif ($signumSource = $self->getUnrepeatableSubfield('111', 'a')) {
+            
+        }
+        elsif ($signumSource = $self->getUnrepeatableSubfield('130', 'a')) {
+            $nonFillingCharacters = $signumSource->parent()->indicator1();
+            $nonFillingCharacters = 0 if (not(defined($nonFillingCharacters)) || $nonFillingCharacters eq ' ');
+        }
+        elsif ($signumSource = $self->getUnrepeatableSubfield('245', 'a')) {
+            $nonFillingCharacters = $signumSource->parent()->indicator2();
+        }
+        if ($signumSource) {
             $self->{signum} = uc(substr($signumSource->content(), 0, 3));
         }
     }

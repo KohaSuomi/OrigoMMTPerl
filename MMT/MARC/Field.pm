@@ -57,7 +57,7 @@ sub addIndicators {
 sub setIndicator1 {
     my $self = shift;
     my $i1 = shift;
-    $self->{i1} = $i1 ? $i1 : ' ';
+    $self->{i1} = defined($i1) ? $i1 : ' ';
 }
 sub indicator1 {
     my $self = shift;
@@ -67,7 +67,7 @@ sub indicator1 {
 sub setIndicator2 {
     my $self = shift;
     my $i2 = shift;
-    $self->{i2} = $i2 ? $i2 : ' ';
+    $self->{i2} = defined($i2) ? $i2 : ' ';
 }
 sub indicator2 {
     my $self = shift;
