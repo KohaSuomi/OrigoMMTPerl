@@ -24,16 +24,17 @@ sub constructor {
 
     eval {
     ##Column mapping rules
-    $s->borrowernumber(1); #2 AsiakasID
-    $s->biblionumber(0);   #1 ID -> Varausrivi
-    $s->itemnumber(2);     #3 NideID
-    $s->branchcode(5);     #6 Noutopiste
-    $s->waitingdate(7);    #8 Saapumispaiva -> found = 'W'
-    $s->priority(0);       #1 ID -> Varausrivi
-    $s->reservedate(6);    #7 Luontipaiva
-    $s->expirationdate(8); #9 Viimeinenpaiva
-    $s->suspend_until(12); #13 Alkamispaiva
-    $s->reservenotes(16);  #17 Lisatiedot
+    $s->borrowernumber(1);       #2 AsiakasID
+    $s->biblionumber(0);         #1 ID -> Varausrivi
+    $s->itemnumber(2);           #3 NideID
+    $s->branchcode(5);           #6 Noutopiste
+    $s->waitingdate(7);          #8 Saapumispaiva -> found = 'W'
+    $s->priority(0);             #1 ID -> Varausrivi
+    $s->reservedate(6);          #7 Luontipaiva
+    $s->expirationdate(8);       #9 Viimeinenpaiva
+    $s->suspend_until(12);       #13 Alkamispaiva
+    $s->reservenotes(16);        #17 Lisatiedot
+    $s->{constrainttype} = 'a';  #Always 'a' in Koha
     };
     if ($@) {
         if ($@ =~ /BADPARAM/) {

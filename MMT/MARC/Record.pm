@@ -344,17 +344,17 @@ sub signum {
         my $signumSource; #One of fields 100, 110, 111, 130, or 245 if 1XX is missing
         my $nonFillingCharacters = 0;
 
-        if (substr($leader,6,1) eq 'g' && $signumSource = $self->getUnrepeatableSubfield('245', 'a')) {
+        if (substr($leader,6,1) eq 'g' && ($signumSource = $self->getUnrepeatableSubfield('245', 'a'))) {
             $nonFillingCharacters = $signumSource->parent()->indicator2();
         }
         elsif ($signumSource = $self->getUnrepeatableSubfield('100', 'a')) {
-            
+
         }
         elsif ($signumSource = $self->getUnrepeatableSubfield('110', 'a')) {
-            
+
         }
         elsif ($signumSource = $self->getUnrepeatableSubfield('111', 'a')) {
-            
+
         }
         elsif ($signumSource = $self->getUnrepeatableSubfield('130', 'a')) {
             $nonFillingCharacters = $signumSource->parent()->indicator1();
@@ -364,7 +364,7 @@ sub signum {
             $nonFillingCharacters = $signumSource->parent()->indicator2();
         }
         if ($signumSource) {
-            $self->{signum} = uc(substr($signumSource->content(), 0, 3));
+            $self->{signum} = uc(substr($signumSource->content(), $nonFillingCharacters, 3));
         }
     }
     return $self->{signum};
@@ -372,12 +372,12 @@ sub signum {
 sub materialType {
     my $self = shift;
     my $matType = shift;
-    
+
 #    my $f245a = $self->getUnrepeatableSubfield('245','a');
 #    if ($f245a && $f245a->content =~ /Ella ja Paterock/) {
 #        my $break = 1;
 #    }
-    
+
 
     if ($matType) {
         my $itype = TranslationTables::material_code_to_itype::fetch($matType);
