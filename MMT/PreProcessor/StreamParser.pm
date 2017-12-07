@@ -33,6 +33,8 @@ sub new {
     $self->{_config} = $params;
     $self->{verbose} = $params->{verbose} || 0;
     bless $self, $class;
+
+    print __PACKAGE__."->new():> Initialized as ".Data::Dumper::Dumper($self)."\n" if $self->{verbose} > 1;
     return $self;
 }
 
@@ -51,14 +53,8 @@ sub parse_file {
     my $sep = $self->config->{separator};
     my $trm = $self->config->{line_terminator};
     my $quo = $self->config->{quote};
-    my $sta = 'inCol';
-    $self->{c_ary} = undef;
-    $self->{c_ary_idx} = undef;
-    $self->{col_i} = 0;
-    $self->{cols} = []; #Collect the extracted columns
+    my $sta = $self->_resetParserStatus();
     $self->{rows} = []; #Collect the extracted rows
-    $self->{columns} = [];
-    $self->{colBuilder} = [];
 
     open(my $SFH, "<:encoding(latin1)", $self->config->{origoSourceBaseDir}.$filename) or die $!;
     <$SFH>; <$SFH>; #Skip header lines
@@ -121,8 +117,33 @@ sub parse_file {
             push(@{$self->{colBuilder}}, $c);
           }
         }
+
+        ## If for some reason the column is growing too large, reset and throw a warning.
+        if (scalar(@{$self->{colBuilder}}) > 250) {
+            $self->resetToNewRow($filename, $ccnt);
+            $sta = $self->_resetParserStatus();
+            $DB::single=1;
+        }
+
+    }
+
+    if ($self->{verbose} > 1) {
+        open (my $FH, '>:encoding(UTF-8)', "logs/1.StreamParser.out.$filename") or die __PACKAGE__.":> Couldn't open logfile for '$filename'";
+        print $FH Data::Dumper::Dumper($self->{rows});
+        close ($FH);
     }
     return $self->{rows};
+}
+
+sub _resetParserStatus {
+    my ($self) = @_;
+    $self->{c_ary} = undef;
+    $self->{c_ary_idx} = undef;
+    $self->{col_i} = 0;
+    $self->{cols} = []; #Collect the extracted columns
+    $self->{colBuilder} = [];
+           #$status
+    return ('inCol');
 }
 
 sub changeColumn {
@@ -152,6 +173,18 @@ sub changeRow {
     print "Previous row: '".join('',@{$self->{cols}})."'\n" if $self->{verbose} > 2;
 
     $self->{cols} = [];
+}
+
+## Sometimes the parser can fault and keeps pushing characters to the column builder @{$self->{colBuilder}}).
+## When somekind of a exception situation arises in the source data, we can recover by reseting the parser
+## to start from a fresh row.
+## Under no circumstances this type of bugs can be left unfixed in the source data.
+sub resetToNewRow {
+    my ($self, $filename, $ccnt) = @_;
+
+    warn __PACKAGE__."::resetToNewRow($filename, $ccnt):> Possible source data error on line $. with collected column:\n".join('', @{$self->{colBuilder}})."\n ... Discarding data and reseting to the next row. Fix this problem!!";
+    $self->_nextRow();
+    $self->changeRow($filename, $ccnt);
 }
 
 sub _nextRow {

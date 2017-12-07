@@ -18,8 +18,10 @@ sub new {
     my ($class, $params) = @_;
     my $self = {};
     bless $self, $class;
-    $self->{verbose} = 0 unless $params->{verbose};
+    $self->{verbose} = $params->{verbose} // 0;
     $self->{extractionFailureCounter} = 1;
+
+    print __PACKAGE__."->new():> Initialized as ".Data::Dumper::Dumper($self)."\n" if $self->{verbose} > 1;
     return $self;
 }
 
@@ -57,6 +59,11 @@ sub extract {
       }
     }
 
+    if ($self->{verbose} > 1) {
+        open (my $FH, '>:encoding(UTF-8)', "logs/1.Extractor.out.$filename") or die __PACKAGE__.":> Couldn't open logfile for '$filename'";
+        print $FH Data::Dumper::Dumper($rows);
+        close ($FH);
+    }
     return $rows;
 }
 
